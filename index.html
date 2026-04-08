@@ -5,11 +5,70 @@
 <title>Wiring Diagram Motor (Realistis + Terminal)</title>
 
 <style>
-body {
-    font-family: Arial;
-    background: #1e1e2f;
+/* AKI REALISTIS */
+.aki-real {
+    width: 140px;
+    height: 100px;
+    background: transparent;
+    border: none;
+}
+
+.aki-body {
+    width: 140px;
+    height: 100px;
+    background: #111;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 0 10px #000 inset;
+}
+
+/* Tutup aki */
+.aki-top {
+    width: 100%;
+    height: 20px;
+    background: #333;
+    position: absolute;
+    top: 0;
+    border-radius: 8px 8px 0 0;
+}
+
+/* Terminal posisi */
+.aki-pos {
+    position: absolute;
+    top: -8px;
+    left: 20px;
+}
+
+.aki-neg {
+    position: absolute;
+    top: -8px;
+    right: 20px;
+}
+
+/* Label */
+.aki-label-pos {
+    position: absolute;
+    top: -25px;
+    left: 22px;
+    color: red;
+    font-weight: bold;
+}
+
+.aki-label-neg {
+    position: absolute;
+    top: -25px;
+    right: 22px;
     color: white;
-    text-align: center;
+    font-weight: bold;
+}
+
+/* Tulisan aki */
+.aki-text {
+    position: absolute;
+    bottom: 10px;
+    left: 45px;
+    font-size: 14px;
+    color: #ccc;
 }
 
 .container {
@@ -90,12 +149,24 @@ line {
 <svg id="svg" width="1200" height="600"></svg>
 
 <!-- AKI -->
-<div id="aki" class="box">
-    🔋 AKI
-    <div class="label">(+)</div>
-    <div class="terminal pos" data-id="aki_pos"></div>
-    <div class="label">(-)</div>
-    <div class="terminal neg" data-id="aki_neg"></div>
+<div id="aki" class="box aki-real">
+    <div class="aki-body">
+
+        <!-- Tutup aki -->
+        <div class="aki-top"></div>
+
+        <!-- Terminal + -->
+        <div class="terminal pos aki-pos" data-id="aki_pos"></div>
+        <div class="label aki-label-pos">+</div>
+
+        <!-- Terminal - -->
+        <div class="terminal neg aki-neg" data-id="aki_neg"></div>
+        <div class="label aki-label-neg">−</div>
+
+        <!-- Tulisan -->
+        <div class="aki-text">12V</div>
+
+    </div>
 </div>
 
 <!-- SEKRING -->
