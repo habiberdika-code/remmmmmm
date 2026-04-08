@@ -2,61 +2,82 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Simulasi Kelistrikan Motor Interaktif</title>
+<title>Simulasi Sistem Lampu Rem Motor (Realistis)</title>
 
 <style>
 body {
     font-family: Arial;
+    background: #222;
+    color: white;
     text-align: center;
-    background: #eef2f3;
 }
-
-h2 { margin-top: 20px; }
 
 .container {
     position: relative;
-    width: 900px;
-    height: 450px;
+    width: 1000px;
+    height: 500px;
     margin: auto;
-    border: 2px dashed #aaa;
+    background: #2c2c2c;
+    border-radius: 10px;
 }
 
-.komponen {
+/* Komponen */
+.box {
     position: absolute;
-    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    background: #444;
+    border: 2px solid #666;
 }
 
+#aki { left: 50px; top: 200px; }
+#sekring { left: 220px; top: 200px; }
+#kunci { left: 400px; top: 200px; }
+#saklar { left: 580px; top: 120px; }
+#lampuBox { left: 780px; top: 200px; }
+#ground { left: 780px; top: 350px; }
+
+/* Node */
 .node {
-    width: 20px;
-    height: 20px;
+    width: 15px;
+    height: 15px;
     background: black;
     border-radius: 50%;
-    margin: auto;
-    cursor: crosshair;
+    margin-top: 5px;
+    cursor: pointer;
 }
 
+/* Lampu */
 .lampu {
-    width: 70px;
-    height: 70px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    background: gray;
+    background: #111;
     margin: auto;
 }
 
 .nyala {
     background: red;
-    box-shadow: 0 0 20px red;
+    box-shadow: 0 0 25px red;
 }
 
+/* Kabel */
 svg {
     position: absolute;
     top: 0;
     left: 0;
 }
 
-button {
-    margin-top: 20px;
-    padding: 10px 20px;
+line {
+    stroke-width: 4;
+}
+
+.merah { stroke: red; }
+.hitam { stroke: black; }
+
+.active {
+    stroke: yellow !important;
+    filter: drop-shadow(0 0 5px yellow);
 }
 </style>
 </head>
@@ -64,52 +85,41 @@ button {
 <body>
 
 <h2>Simulasi Sistem Lampu Rem Sepeda Motor</h2>
-<p>Tarik kabel dari node ke node (Aki → Sekring → Kunci → Saklar → Lampu → Ground)</p>
+<p>Hubungkan rangkaian dengan benar seperti sistem motor nyata</p>
 
 <div class="container">
 
-<svg id="svg" width="900" height="450"></svg>
+<svg id="svg" width="1000" height="500"></svg>
 
-<!-- AKI -->
-<div class="komponen" style="left:50px; top:180px;">
-    🔋
+<div id="aki" class="box">
+    🔋 Aki (+)
     <div class="node" data-id="aki"></div>
-    <p>Aki</p>
 </div>
 
-<!-- SEKring -->
-<div class="komponen" style="left:200px; top:50px;">
-    ⚡
+<div id="sekring" class="box">
+    ⚡ Sekring
     <div class="node" data-id="sekring"></div>
-    <p>Sekring</p>
 </div>
 
-<!-- KUNCI -->
-<div class="komponen" style="left:350px; top:180px;">
-    🔑
+<div id="kunci" class="box">
+    🔑 Kunci Kontak
     <div class="node" data-id="kunci"></div>
-    <p>Kunci</p>
 </div>
 
-<!-- SAKLAR REM -->
-<div class="komponen" style="left:500px; top:50px;">
-    🔘
+<div id="saklar" class="box">
+    🔘 Saklar Rem
     <div class="node" data-id="saklar"></div>
-    <p>Saklar Rem</p>
 </div>
 
-<!-- LAMPU -->
-<div class="komponen" style="left:650px; top:180px;">
+<div id="lampuBox" class="box">
+    💡 Lampu Rem
     <div id="lampu" class="lampu"></div>
     <div class="node" data-id="lampu"></div>
-    <p>Lampu</p>
 </div>
 
-<!-- GROUND -->
-<div class="komponen" style="left:800px; top:50px;">
-    ⏚
+<div id="ground" class="box">
+    ⏚ Massa (-)
     <div class="node" data-id="ground"></div>
-    <p>Ground</p>
 </div>
 
 </div>
@@ -117,35 +127,43 @@ button {
 <button onclick="resetSimulasi()">Reset</button>
 
 <script>
-let startNode = null;
+let start = null;
 let connections = [];
-let svg = document.getElementById("svg");
+let lines = [];
 
 document.querySelectorAll(".node").forEach(node => {
     node.addEventListener("click", function(e) {
+
         let rect = e.target.getBoundingClientRect();
-        let x = rect.left + 10 - svg.getBoundingClientRect().left;
-        let y = rect.top + 10 - svg.getBoundingClientRect().top;
+        let svgRect = document.getElementById("svg").getBoundingClientRect();
 
-        if (!startNode) {
-            startNode = { id: this.dataset.id, x, y };
+        let x = rect.left - svgRect.left + 7;
+        let y = rect.top - svgRect.top + 7;
+
+        if (!start) {
+            start = { id: this.dataset.id, x, y };
         } else {
-            let endNode = { id: this.dataset.id, x, y };
+            let end = { id: this.dataset.id, x, y };
 
-            // gambar garis
             let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            line.setAttribute("x1", startNode.x);
-            line.setAttribute("y1", startNode.y);
-            line.setAttribute("x2", endNode.x);
-            line.setAttribute("y2", endNode.y);
-            line.setAttribute("stroke", "black");
-            line.setAttribute("stroke-width", "3");
+            line.setAttribute("x1", start.x);
+            line.setAttribute("y1", start.y);
+            line.setAttribute("x2", end.x);
+            line.setAttribute("y2", end.y);
 
-            svg.appendChild(line);
+            // warna kabel
+            if (start.id === "ground" || end.id === "ground") {
+                line.setAttribute("class", "hitam");
+            } else {
+                line.setAttribute("class", "merah");
+            }
 
-            connections.push(startNode.id + "-" + endNode.id);
+            document.getElementById("svg").appendChild(line);
 
-            startNode = null;
+            connections.push(start.id + "-" + end.id);
+            lines.push(line);
+
+            start = null;
 
             cekRangkaian();
         }
@@ -161,19 +179,22 @@ function cekRangkaian() {
         "lampu-ground"
     ];
 
-    let cocok = benar.every(r => 
+    let cocok = benar.every(r =>
         connections.includes(r) || connections.includes(r.split("-").reverse().join("-"))
     );
 
     if (cocok) {
         document.getElementById("lampu").classList.add("nyala");
+
+        lines.forEach(l => l.classList.add("active"));
     }
 }
 
 function resetSimulasi() {
-    startNode = null;
+    start = null;
     connections = [];
-    svg.innerHTML = "";
+    lines = [];
+    document.getElementById("svg").innerHTML = "";
     document.getElementById("lampu").classList.remove("nyala");
 }
 </script>
