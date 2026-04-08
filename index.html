@@ -2,63 +2,71 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Simulasi Wiring Diagram Motor</title>
+<title>Wiring Diagram Motor (Realistis + Terminal)</title>
 
 <style>
 body {
     font-family: Arial;
-    background: #1f1f2e;
+    background: #1e1e2f;
     color: white;
     text-align: center;
 }
 
 .container {
     position: relative;
-    width: 1100px;
-    height: 550px;
+    width: 1200px;
+    height: 600px;
     margin: auto;
-    background: #2b2b3c;
+    background: #2c2c3f;
     border-radius: 12px;
 }
 
-/* Komponen realistis */
-.komponen {
+/* Komponen */
+.box {
     position: absolute;
-    text-align: center;
-    background: #3b3b50;
-    padding: 10px;
+    background: #3a3a50;
+    border: 2px solid #777;
     border-radius: 10px;
-    border: 2px solid #666;
+    padding: 10px;
 }
 
-/* Posisi seperti motor */
-#aki { left: 50px; top: 250px; }
-#sekring { left: 220px; top: 250px; }
-#kunci { left: 400px; top: 250px; }
-#saklar { left: 600px; top: 120px; }
-#lampu { left: 900px; top: 200px; }
-#ground { left: 900px; top: 380px; }
+/* Posisi */
+#aki { left: 50px; top: 250px; width: 120px; }
+#sekring { left: 250px; top: 250px; width: 120px; }
+#kunci { left: 450px; top: 250px; width: 140px; }
+#saklar { left: 700px; top: 150px; width: 140px; }
+#lampu { left: 950px; top: 250px; width: 120px; }
 
-/* Titik sambung */
-.node {
-    width: 18px;
-    height: 18px;
-    background: black;
+/* Terminal */
+.terminal {
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    margin-top: 5px;
+    margin: 5px;
     cursor: pointer;
+    display: inline-block;
+}
+
+/* Warna terminal */
+.pos { background: red; }
+.neg { background: black; }
+.netral { background: orange; }
+
+/* Label */
+.label {
+    font-size: 12px;
 }
 
 /* Lampu */
 .bohlam {
-    width: 70px;
-    height: 70px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: #111;
     margin: auto;
 }
 
-/* SVG kabel */
+/* Kabel */
 svg {
     position: absolute;
     top: 0;
@@ -69,53 +77,62 @@ line {
     stroke: #aaa;
     stroke-width: 3;
 }
-
-.active {
-    stroke: yellow;
-    stroke-width: 5;
-    filter: drop-shadow(0 0 5px yellow);
-}
 </style>
 </head>
 
 <body>
 
-<h2>Media Pembelajaran Wiring Diagram Lampu Rem</h2>
-<p>Silakan gambar sendiri jalur kabel sesuai pemahaman</p>
+<h2>Simulasi Wiring Diagram Sistem Lampu Rem</h2>
+<p>Hubungkan terminal sesuai rangkaian motor</p>
 
 <div class="container">
 
-<svg id="svg" width="1100" height="550"></svg>
+<svg id="svg" width="1200" height="600"></svg>
 
-<div id="aki" class="komponen">
-    🔋 Aki (+)
-    <div class="node" data-id="aki"></div>
+<!-- AKI -->
+<div id="aki" class="box">
+    🔋 AKI
+    <div class="label">(+)</div>
+    <div class="terminal pos" data-id="aki_pos"></div>
+    <div class="label">(-)</div>
+    <div class="terminal neg" data-id="aki_neg"></div>
 </div>
 
-<div id="sekring" class="komponen">
-    ⚡ Sekring
-    <div class="node" data-id="sekring"></div>
+<!-- SEKRING -->
+<div id="sekring" class="box">
+    ⚡ SEKRING
+    <div class="label">IN</div>
+    <div class="terminal netral" data-id="sekring_in"></div>
+    <div class="label">OUT</div>
+    <div class="terminal netral" data-id="sekring_out"></div>
 </div>
 
-<div id="kunci" class="komponen">
-    🔑 Kunci Kontak
-    <div class="node" data-id="kunci"></div>
+<!-- KUNCI -->
+<div id="kunci" class="box">
+    🔑 KUNCI
+    <div class="label">INPUT</div>
+    <div class="terminal netral" data-id="kunci_in"></div>
+    <div class="label">OUTPUT</div>
+    <div class="terminal netral" data-id="kunci_out"></div>
 </div>
 
-<div id="saklar" class="komponen">
-    🔘 Saklar Rem
-    <div class="node" data-id="saklar"></div>
+<!-- SAKLAR -->
+<div id="saklar" class="box">
+    🔘 SAKLAR REM
+    <div class="label">MASUK</div>
+    <div class="terminal netral" data-id="saklar_in"></div>
+    <div class="label">KELUAR</div>
+    <div class="terminal netral" data-id="saklar_out"></div>
 </div>
 
-<div id="lampu" class="komponen">
-    💡 Lampu Rem
+<!-- LAMPU -->
+<div id="lampu" class="box">
+    💡 LAMPU
     <div class="bohlam"></div>
-    <div class="node" data-id="lampu"></div>
-</div>
-
-<div id="ground" class="komponen">
-    ⏚ Massa (-)
-    <div class="node" data-id="ground"></div>
+    <div class="label">(+)</div>
+    <div class="terminal pos" data-id="lampu_pos"></div>
+    <div class="label">(-)</div>
+    <div class="terminal neg" data-id="lampu_neg"></div>
 </div>
 
 </div>
@@ -125,14 +142,14 @@ line {
 <script>
 let start = null;
 
-document.querySelectorAll(".node").forEach(node => {
-    node.addEventListener("click", function(e) {
+document.querySelectorAll(".terminal").forEach(t => {
+    t.addEventListener("click", function(e) {
 
         let rect = e.target.getBoundingClientRect();
         let svgRect = document.getElementById("svg").getBoundingClientRect();
 
-        let x = rect.left - svgRect.left + 9;
-        let y = rect.top - svgRect.top + 9;
+        let x = rect.left - svgRect.left + 8;
+        let y = rect.top - svgRect.top + 8;
 
         if (!start) {
             start = { x, y };
