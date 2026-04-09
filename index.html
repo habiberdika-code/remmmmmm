@@ -2,10 +2,10 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Simulasi Wiring Lampu Rem</title>
+<title>Simulasi Wiring PRO</title>
 
 <style>
-body { font-family: Arial; margin:0; }
+body { margin:0; font-family:Arial; }
 .container { display:flex; height:100vh; }
 
 .sidebar {
@@ -28,16 +28,17 @@ body { font-family: Arial; margin:0; }
 }
 
 .node {
-  width:12px; height:12px;
-  background:red;
+  width:14px; height:14px;
   border-radius:50%;
   position:absolute;
   cursor:pointer;
 }
 
-.node.neg { background:black; }
+.pos { background:red; }
+.neg { background:black; }
+.net { background:blue; }
 
-.lamp-on { background:yellow; box-shadow:0 0 20px yellow; }
+.lamp-on { background:yellow; box-shadow:0 0 25px yellow; }
 
 canvas {
   position:absolute;
@@ -61,55 +62,55 @@ canvas {
 </div>
 
 <script>
-let dragged = "";
-let workspace = document.getElementById("workspace");
-let canvas = document.getElementById("canvas");
-let ctx = canvas.getContext("2d");
+let dragged="";
+let workspace=document.getElementById("workspace");
+let canvas=document.getElementById("canvas");
+let ctx=canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
 
-let nodes = [];
-let connections = [];
-let startNode = null;
+let nodes=[];
+let wires=[];
+let startNode=null;
 
 // DRAG
 document.querySelectorAll('.item').forEach(i=>{
-  i.ondragstart=()=> dragged=i.innerText;
+  i.ondragstart=()=>dragged=i.innerText;
 });
 
 workspace.ondragover=e=>e.preventDefault();
 
 workspace.ondrop=e=>{
-  let comp = document.createElement("div");
-  comp.className="component";
-  comp.style.left=e.offsetX+"px";
-  comp.style.top=e.offsetY+"px";
+  let c=document.createElement("div");
+  c.className="component";
+  c.style.left=e.offsetX+"px";
+  c.style.top=e.offsetY+"px";
 
   if(dragged==="AKI"){
-    comp.innerHTML="AKI";
-    addNode(comp,0,20,"+");
-    addNode(comp,60,20,"-","neg");
+    c.innerHTML="AKI";
+    createNode(c,0,20,"pos");
+    createNode(c,70,20,"neg");
   }
 
   if(dragged==="Lampu"){
-    comp.innerHTML="Lampu";
-    addNode(comp,0,20,"");
-    addNode(comp,60,20,"");
+    c.innerHTML="Lampu";
+    createNode(c,0,20,"net");
+    createNode(c,70,20,"net");
   }
 
   if(dragged==="Saklar"){
-    comp.innerHTML="Saklar";
-    comp.onclick=()=> comp.classList.toggle("on");
-    addNode(comp,0,20,"");
-    addNode(comp,60,20,"");
+    c.innerHTML="Saklar";
+    c.onclick=()=>{c.classList.toggle("on"); checkCircuit();}
+    createNode(c,0,20,"net");
+    createNode(c,70,20,"net");
   }
 
-  workspace.appendChild(comp);
+  workspace.appendChild(c);
 };
 
-// TAMBAH TITIK KABEL
-function addNode(parent,x,y,label,type=""){
+// BUAT NODE
+function createNode(parent,x,y,type){
   let n=document.createElement("div");
   n.className="node "+type;
   n.style.left=x+"px";
@@ -121,7 +122,7 @@ function addNode(parent,x,y,label,type=""){
     if(!startNode){
       startNode=n;
     }else{
-      connections.push({a:startNode,b:n});
+      wires.push({a:startNode,b:n});
       startNode=null;
       draw();
       checkCircuit();
@@ -136,20 +137,56 @@ function addNode(parent,x,y,label,type=""){
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  connections.forEach(c=>{
-    let r1=c.a.getBoundingClientRect();
-    let r2=c.b.getBoundingClientRect();
+  wires.forEach(w=>{
+    let r1=w.a.getBoundingClientRect();
+    let r2=w.b.getBoundingClientRect();
+
+    let color="blue";
+    if(w.a.classList.contains("pos") || w.b.classList.contains("pos")) color="red";
+    if(w.a.classList.contains("neg") || w.b.classList.contains("neg")) color="black";
+
+    ctx.strokeStyle=color;
+    ctx.lineWidth=3;
 
     ctx.beginPath();
-    ctx.moveTo(r1.left+6, r1.top+6);
-    ctx.lineTo(r2.left+6, r2.top+6);
+    ctx.moveTo(r1.left+7, r1.top+7);
+    ctx.lineTo(r2.left+7, r2.top+7);
     ctx.stroke();
   });
 }
 
-// CEK RANGKAIAN
+// GRAPH (PATHFINDING)
+function buildGraph(){
+  let graph=new Map();
+
+  nodes.forEach(n=>graph.set(n,[]));
+
+  wires.forEach(w=>{
+    graph.get(w.a).push(w.b);
+    graph.get(w.b).push(w.a);
+  });
+
+  return graph;
+}
+
+// DFS
+function hasPath(graph,start,target,visited=new Set()){
+  if(start===target) return true;
+  visited.add(start);
+
+  for(let next of graph.get(start)){
+    if(!visited.has(next)){
+      if(hasPath(graph,next,target,visited)) return true;
+    }
+  }
+  return false;
+}
+
+// CEK RANGKAIAN REAL
 function checkCircuit(){
-  let akiPlus=null, akiMin=null, lamp=null, saklarOn=false;
+  let graph=buildGraph();
+
+  let akiPlus, akiMin, lampNodes=[], saklarOn=false;
 
   document.querySelectorAll(".component").forEach(c=>{
     if(c.innerText.includes("AKI")){
@@ -157,20 +194,30 @@ function checkCircuit(){
       akiMin=c.children[1];
     }
     if(c.innerText.includes("Lampu")){
-      lamp=c;
+      lampNodes=[c.children[0], c.children[1]];
     }
     if(c.innerText.includes("Saklar") && c.classList.contains("on")){
       saklarOn=true;
     }
   });
 
-  if(!akiPlus || !akiMin || !lamp) return;
+  let lamp=document.querySelector(".component:nth-child(n)"); // ambil lampu
+  let lampComp=null;
 
-  // cek sederhana: minimal ada 3 koneksi & saklar ON
-  if(connections.length>=3 && saklarOn){
-    lamp.classList.add("lamp-on");
+  document.querySelectorAll(".component").forEach(c=>{
+    if(c.innerText.includes("Lampu")) lampComp=c;
+  });
+
+  if(!akiPlus || !akiMin || lampNodes.length<2) return;
+
+  // CEK JALUR:
+  let path1 = hasPath(graph, akiPlus, lampNodes[0]);
+  let path2 = hasPath(graph, lampNodes[1], akiMin);
+
+  if(path1 && path2 && saklarOn){
+    lampComp.classList.add("lamp-on");
   }else{
-    lamp.classList.remove("lamp-on");
+    lampComp.classList.remove("lamp-on");
   }
 }
 </script>
