@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Simulasi Wiring Final Fix</title>
+<title>Simulasi Wiring + Gambar Asli</title>
 
 <style>
 body { margin:0; font-family:Arial; overflow:hidden; }
@@ -22,16 +22,20 @@ body { margin:0; font-family:Arial; overflow:hidden; }
 
 .component {
   position:absolute;
-  width:90px; height:60px;
-  border:2px solid #333;
+  width:90px; height:70px;
   border-radius:10px;
   text-align:center;
-  line-height:60px;
-  font-size:20px;
-  background:white;
+  background:transparent;
   cursor:move;
 }
 
+/* GAMBAR */
+.component img {
+  width:70px;
+  pointer-events:none;
+}
+
+/* TERMINAL */
 .node {
   width:14px; height:14px;
   border-radius:50%;
@@ -45,9 +49,15 @@ body { margin:0; font-family:Arial; overflow:hidden; }
 .left { left:-7px; top:50%; transform:translateY(-50%); }
 .right { right:-7px; top:50%; transform:translateY(-50%); }
 
-.lamp-on { background:yellow; box-shadow:0 0 30px yellow; }
+/* LAMPU NYALA */
+.lamp-on img {
+  filter: drop-shadow(0 0 15px yellow);
+}
 
-.switch.on { background:#4caf50; color:white; }
+/* SAKLAR */
+.switch.on img {
+  filter: brightness(1.5);
+}
 
 canvas {
   position:absolute;
@@ -98,7 +108,7 @@ workspace.ondrop=e=>{
   createComponent(dragged,e.offsetX,e.offsetY);
 };
 
-// DRAG ULANG KOMPONEN
+// DRAG ULANG
 function makeDraggable(el){
   let offsetX, offsetY, isDown=false;
 
@@ -119,7 +129,7 @@ function makeDraggable(el){
   document.onmouseup=()=>isDown=false;
 }
 
-// CREATE COMPONENT
+// CREATE COMPONENT (PAKAI GAMBAR)
 function createComponent(type,x,y){
   let c=document.createElement("div");
   c.className="component";
@@ -127,19 +137,19 @@ function createComponent(type,x,y){
   c.style.top=y+"px";
 
   if(type==="AKI"){
-    c.innerHTML="🔋";
+    c.innerHTML='<img src="img/aki.png">';
     createNode(c,"pos","left");
     createNode(c,"neg","right");
   }
 
   if(type==="Lampu"){
-    c.innerHTML="💡";
+    c.innerHTML='<img src="img/lampu.png">';
     createNode(c,"net","left");
     createNode(c,"net","right");
   }
 
   if(type==="Saklar"){
-    c.innerHTML="⏻";
+    c.innerHTML='<img src="img/saklar.png">';
     c.classList.add("switch");
 
     c.onclick=(e)=>{
@@ -155,7 +165,7 @@ function createComponent(type,x,y){
   makeDraggable(c);
 }
 
-// NODE (DRAW WIRE)
+// NODE
 function createNode(parent,type,pos){
   let n=document.createElement("div");
   n.className="node "+type+" "+pos;
@@ -169,63 +179,7 @@ function createNode(parent,type,pos){
   nodes.push(n);
 }
 
-// MOUSE MOVE
-workspace.onmousemove=e=>{
-  if(drawingWire){
-    drawingWire.x=e.clientX;
-    drawingWire.y=e.clientY;
-  }
-};
-
-// MOUSE UP (CONNECT)
-workspace.onmouseup=e=>{
-  if(!drawingWire) return;
-
-  let target=getNearestNode(e.clientX,e.clientY);
-
-  if(target && target!==drawingWire.start){
-    wires.push({a:drawingWire.start,b:target});
-  }
-
-  drawingWire=null;
-};
-
-// SNAP
-function getNearestNode(x,y){
-  let min=25, res=null;
-  nodes.forEach(n=>{
-    let r=n.getBoundingClientRect();
-    let cx=r.left+r.width/2;
-    let cy=r.top+r.height/2;
-    let d=Math.hypot(cx-x,cy-y);
-    if(d<min){min=d;res=n;}
-  });
-  return res;
-}
-
-// HAPUS KABEL (KLIK)
-canvas.onclick=(e)=>{
-  let ws=workspace.getBoundingClientRect();
-  let x=e.clientX-ws.left;
-  let y=e.clientY-ws.top;
-
-  wires = wires.filter(w=>{
-    let r1=w.a.getBoundingClientRect();
-    let r2=w.b.getBoundingClientRect();
-
-    let x1=r1.left-ws.left+r1.width/2;
-    let y1=r1.top-ws.top+r1.height/2;
-    let x2=r2.left-ws.left+r2.width/2;
-    let y2=r2.top-ws.top+r2.height/2;
-
-    let dist=Math.abs((y2-y1)*x-(x2-x1)*y+x2*y1-y2*x1)/
-             Math.hypot(y2-y1,x2-x1);
-
-    return dist>5; // kalau dekat garis → hapus
-  });
-};
-
-// DRAW
+// DRAW KABEL
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   let ws=workspace.getBoundingClientRect();
@@ -252,16 +206,8 @@ function draw(){
     ctx.moveTo(x1,y1);
     ctx.bezierCurveTo(mx,y1,mx,y2,x2,y2);
     ctx.stroke();
-
-    // animasi arus
-    ctx.setLineDash([10,10]);
-    ctx.lineDashOffset=-flowOffset;
-    ctx.strokeStyle="orange";
-    ctx.stroke();
-    ctx.setLineDash([]);
   });
 
-  // garis sementara
   if(drawingWire){
     ctx.beginPath();
     ctx.moveTo(
@@ -273,12 +219,36 @@ function draw(){
     ctx.stroke();
   }
 
-  flowOffset+=1;
   requestAnimationFrame(draw);
 }
 draw();
 
-// LOGIKA REAL
+// SNAP & CONNECT
+workspace.onmouseup=e=>{
+  if(!drawingWire) return;
+
+  let target=getNearestNode(e.clientX,e.clientY);
+
+  if(target && target!==drawingWire.start){
+    wires.push({a:drawingWire.start,b:target});
+  }
+
+  drawingWire=null;
+};
+
+function getNearestNode(x,y){
+  let min=25, res=null;
+  nodes.forEach(n=>{
+    let r=n.getBoundingClientRect();
+    let cx=r.left+r.width/2;
+    let cy=r.top+r.height/2;
+    let d=Math.hypot(cx-x,cy-y);
+    if(d<min){min=d;res=n;}
+  });
+  return res;
+}
+
+// LOGIKA LAMPU
 function buildGraph(){
   let g=new Map();
   nodes.forEach(n=>g.set(n,[]));
@@ -306,12 +276,12 @@ setInterval(()=>{
   let akiPlus,akiMin,lampNodes=[],lampComp,saklarOn=false;
 
   document.querySelectorAll(".component").forEach(c=>{
-    if(c.innerText==="🔋"){
-      akiPlus=c.children[0];
-      akiMin=c.children[1];
+    if(c.innerHTML.includes("aki.png")){
+      akiPlus=c.children[1];
+      akiMin=c.children[2];
     }
-    if(c.innerText==="💡"){
-      lampNodes=[c.children[0],c.children[1]];
+    if(c.innerHTML.includes("lampu.png")){
+      lampNodes=[c.children[1],c.children[2]];
       lampComp=c;
     }
     if(c.classList.contains("switch") && c.classList.contains("on")){
