@@ -2,245 +2,185 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Wiring Diagram Motor (Realistis + Terminal)</title>
+<title>Simulasi Lampu Rem</title>
 
 <style>
-/* AKI REALISTIS */
-.aki-real {
-    width: 140px;
-    height: 100px;
-    background: transparent;
-    border: none;
-}
-
-.aki-body {
-    width: 140px;
-    height: 100px;
-    background: #111;
-    border-radius: 8px;
-    position: relative;
-    box-shadow: 0 0 10px #000 inset;
-}
-
-/* Tutup aki */
-.aki-top {
-    width: 100%;
-    height: 20px;
-    background: #333;
-    position: absolute;
-    top: 0;
-    border-radius: 8px 8px 0 0;
-}
-
-/* Terminal posisi */
-.aki-pos {
-    position: absolute;
-    top: -8px;
-    left: 20px;
-}
-
-.aki-neg {
-    position: absolute;
-    top: -8px;
-    right: 20px;
-}
-
-/* Label */
-.aki-label-pos {
-    position: absolute;
-    top: -25px;
-    left: 22px;
-    color: red;
-    font-weight: bold;
-}
-
-.aki-label-neg {
-    position: absolute;
-    top: -25px;
-    right: 22px;
-    color: white;
-    font-weight: bold;
-}
-
-/* Tulisan aki */
-.aki-text {
-    position: absolute;
-    bottom: 10px;
-    left: 45px;
-    font-size: 14px;
-    color: #ccc;
+body {
+  font-family: Arial;
+  margin: 0;
 }
 
 .container {
-    position: relative;
-    width: 1200px;
-    height: 600px;
-    margin: auto;
-    background: #2c2c3f;
-    border-radius: 12px;
+  display: flex;
+  height: 100vh;
 }
 
-/* Komponen */
-.box {
-    position: absolute;
-    background: #3a3a50;
-    border: 2px solid #777;
-    border-radius: 10px;
-    padding: 10px;
+.sidebar {
+  width: 220px;
+  background: #f2f2f2;
+  padding: 10px;
 }
 
-/* Posisi */
-#aki { left: 50px; top: 250px; width: 120px; }
-#sekring { left: 250px; top: 250px; width: 120px; }
-#kunci { left: 450px; top: 250px; width: 140px; }
-#saklar { left: 700px; top: 150px; width: 140px; }
-#lampu { left: 950px; top: 250px; width: 120px; }
-
-/* Terminal */
-.terminal {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    margin: 5px;
-    cursor: pointer;
-    display: inline-block;
+.item {
+  background: white;
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid #ccc;
+  cursor: grab;
+  border-radius: 5px;
 }
 
-/* Warna terminal */
-.pos { background: red; }
-.neg { background: black; }
-.netral { background: orange; }
+.workspace {
+  flex: 1;
+  border: 2px dashed #ccc;
+  position: relative;
+}
 
-/* Label */
-.label {
-    font-size: 12px;
+.dragged {
+  position: absolute;
+  padding: 10px;
+  border: 1px solid #333;
+  border-radius: 5px;
+  cursor: move;
 }
 
 /* Lampu */
-.bohlam {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: #111;
-    margin: auto;
+.lamp-off {
+  background: #ddd;
 }
 
-/* Kabel */
-svg {
-    position: absolute;
-    top: 0;
-    left: 0;
+.lamp-on {
+  background: yellow;
+  box-shadow: 0 0 20px yellow;
 }
 
-line {
-    stroke: #aaa;
-    stroke-width: 3;
+/* Saklar aktif */
+.active {
+  background: #4caf50 !important;
+  color: white;
 }
 </style>
 </head>
 
 <body>
 
-<h2>Simulasi Wiring Diagram Sistem Lampu Rem</h2>
-<p>Hubungkan terminal sesuai rangkaian motor</p>
-
 <div class="container">
 
-<svg id="svg" width="1200" height="600"></svg>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h3>Komponen</h3>
+    <div class="item" draggable="true">AKI</div>
+    <div class="item" draggable="true">Fuse</div>
+    <div class="item" draggable="true">Lampu</div>
+    <div class="item" draggable="true">Saklar Rem Depan</div>
+    <div class="item" draggable="true">Saklar Rem Belakang</div>
+    <div class="item" draggable="true">Massa</div>
+  </div>
 
-<!-- AKI -->
-<div id="aki" class="box aki-real">
-    <div class="aki-body">
-
-        <!-- Tutup aki -->
-        <div class="aki-top"></div>
-
-        <!-- Terminal + -->
-        <div class="terminal pos aki-pos" data-id="aki_pos"></div>
-        <div class="label aki-label-pos">+</div>
-
-        <!-- Terminal - -->
-        <div class="terminal neg aki-neg" data-id="aki_neg"></div>
-        <div class="label aki-label-neg">−</div>
-
-        <!-- Tulisan -->
-        <div class="aki-text">12V</div>
-
-    </div>
-</div>
-
-<!-- SEKRING -->
-<div id="sekring" class="box">
-    ⚡ SEKRING
-    <div class="label">IN</div>
-    <div class="terminal netral" data-id="sekring_in"></div>
-    <div class="label">OUT</div>
-    <div class="terminal netral" data-id="sekring_out"></div>
-</div>
-
-<!-- KUNCI -->
-<div id="kunci" class="box">
-    🔑 KUNCI
-    <div class="label">INPUT</div>
-    <div class="terminal netral" data-id="kunci_in"></div>
-    <div class="label">OUTPUT</div>
-    <div class="terminal netral" data-id="kunci_out"></div>
-</div>
-
-<!-- SAKLAR -->
-<div id="saklar" class="box">
-    🔘 SAKLAR REM
-    <div class="label">MASUK</div>
-    <div class="terminal netral" data-id="saklar_in"></div>
-    <div class="label">KELUAR</div>
-    <div class="terminal netral" data-id="saklar_out"></div>
-</div>
-
-<!-- LAMPU -->
-<div id="lampu" class="box">
-    💡 LAMPU
-    <div class="bohlam"></div>
-    <div class="label">(+)</div>
-    <div class="terminal pos" data-id="lampu_pos"></div>
-    <div class="label">(-)</div>
-    <div class="terminal neg" data-id="lampu_neg"></div>
-</div>
+  <!-- Workspace -->
+  <div class="workspace" id="workspace"></div>
 
 </div>
-
-<button onclick="reset()">Reset</button>
 
 <script>
-let start = null;
+let draggedItem = null;
+const workspace = document.getElementById('workspace');
 
-document.querySelectorAll(".terminal").forEach(t => {
-    t.addEventListener("click", function(e) {
+let components = [];
 
-        let rect = e.target.getBoundingClientRect();
-        let svgRect = document.getElementById("svg").getBoundingClientRect();
-
-        let x = rect.left - svgRect.left + 8;
-        let y = rect.top - svgRect.top + 8;
-
-        if (!start) {
-            start = { x, y };
-        } else {
-            let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-
-            line.setAttribute("x1", start.x);
-            line.setAttribute("y1", start.y);
-            line.setAttribute("x2", x);
-            line.setAttribute("y2", y);
-
-            document.getElementById("svg").appendChild(line);
-
-            start = null;
-        }
-    });
+// Drag start
+document.querySelectorAll('.item').forEach(item => {
+  item.addEventListener('dragstart', () => {
+    draggedItem = item.innerText;
+  });
 });
 
-function reset() {
-    document.getElementById("svg").innerHTML = "";
+// Allow drop
+workspace.addEventListener('dragover', (e) => {
+  e.preventDefault();
+});
+
+// Drop
+workspace.addEventListener('drop', (e) => {
+  e.preventDefault();
+
+  const el = document.createElement('div');
+  el.classList.add('dragged');
+  el.innerText = draggedItem;
+
+  el.style.left = e.offsetX + 'px';
+  el.style.top = e.offsetY + 'px';
+
+  // Tambah class khusus
+  if (draggedItem === "Lampu") {
+    el.classList.add("lamp-off");
+  }
+
+  if (draggedItem.includes("Saklar")) {
+    el.addEventListener("click", () => {
+      el.classList.toggle("active");
+      checkLamp();
+    });
+  }
+
+  workspace.appendChild(el);
+  components.push(el);
+
+  makeDraggable(el);
+  checkLamp();
+});
+
+// Drag ulang dalam workspace
+function makeDraggable(el) {
+  let offsetX, offsetY, isDown = false;
+
+  el.addEventListener('mousedown', (e) => {
+    isDown = true;
+    offsetX = e.offsetX;
+    offsetY = e.offsetY;
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (isDown) {
+      el.style.left = (e.pageX - workspace.offsetLeft - offsetX) + 'px';
+      el.style.top = (e.pageY - workspace.offsetTop - offsetY) + 'px';
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    isDown = false;
+  });
+}
+
+// LOGIKA LAMPU
+function checkLamp() {
+  let hasAki = false;
+  let hasLamp = false;
+  let hasMassa = false;
+  let switchOn = false;
+
+  components.forEach(el => {
+    if (el.innerText === "AKI") hasAki = true;
+    if (el.innerText === "Lampu") hasLamp = true;
+    if (el.innerText === "Massa") hasMassa = true;
+
+    if (el.innerText.includes("Saklar") && el.classList.contains("active")) {
+      switchOn = true;
+    }
+  });
+
+  // Update lampu
+  components.forEach(el => {
+    if (el.innerText === "Lampu") {
+      if (hasAki && hasLamp && hasMassa && switchOn) {
+        el.classList.remove("lamp-off");
+        el.classList.add("lamp-on");
+      } else {
+        el.classList.remove("lamp-on");
+        el.classList.add("lamp-off");
+      }
+    }
+  });
 }
 </script>
 
