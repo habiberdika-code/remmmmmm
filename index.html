@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Simulasi Wiring Final</title>
+<title>Simulasi Wiring Final Fix</title>
 
 <style>
 body { margin:0; font-family:Arial; overflow:hidden; }
@@ -29,6 +29,7 @@ body { margin:0; font-family:Arial; overflow:hidden; }
   line-height:60px;
   font-size:20px;
   background:white;
+  cursor:move;
 }
 
 .node {
@@ -47,18 +48,10 @@ body { margin:0; font-family:Arial; overflow:hidden; }
 .lamp-on { background:yellow; box-shadow:0 0 30px yellow; }
 
 .switch.on { background:#4caf50; color:white; }
-.fuse.off { background:#ff5252; color:white; }
 
 canvas {
   position:absolute;
   top:0; left:0;
-}
-.controls {
-  position:absolute;
-  bottom:10px; right:10px;
-}
-button {
-  padding:10px;
 }
 </style>
 </head>
@@ -70,15 +63,10 @@ button {
     <div class="item" draggable="true">AKI</div>
     <div class="item" draggable="true">Lampu</div>
     <div class="item" draggable="true">Saklar</div>
-    <div class="item" draggable="true">Fuse</div>
   </div>
 
   <div class="workspace" id="workspace">
     <canvas id="canvas"></canvas>
-
-    <div class="controls">
-      <button onclick="resetAll()">Reset</button>
-    </div>
   </div>
 </div>
 
@@ -99,7 +87,7 @@ let nodes=[], wires=[];
 let drawingWire=null;
 let flowOffset=0;
 
-// DRAG COMPONENT
+// DRAG SIDEBAR
 document.querySelectorAll('.item').forEach(i=>{
   i.ondragstart=()=>dragged=i.innerText;
 });
@@ -109,6 +97,27 @@ workspace.ondragover=e=>e.preventDefault();
 workspace.ondrop=e=>{
   createComponent(dragged,e.offsetX,e.offsetY);
 };
+
+// DRAG ULANG KOMPONEN
+function makeDraggable(el){
+  let offsetX, offsetY, isDown=false;
+
+  el.onmousedown=(e)=>{
+    if(e.target.classList.contains("node")) return;
+    isDown=true;
+    offsetX=e.offsetX;
+    offsetY=e.offsetY;
+  };
+
+  document.onmousemove=(e)=>{
+    if(isDown){
+      el.style.left=(e.pageX-workspace.offsetLeft-offsetX)+"px";
+      el.style.top=(e.pageY-workspace.offsetTop-offsetY)+"px";
+    }
+  };
+
+  document.onmouseup=()=>isDown=false;
+}
 
 // CREATE COMPONENT
 function createComponent(type,x,y){
@@ -132,29 +141,21 @@ function createComponent(type,x,y){
   if(type==="Saklar"){
     c.innerHTML="⏻";
     c.classList.add("switch");
+
     c.onclick=(e)=>{
       if(e.target.classList.contains("node")) return;
       c.classList.toggle("on");
     };
-    createNode(c,"net","left");
-    createNode(c,"net","right");
-  }
 
-  if(type==="Fuse"){
-    c.innerHTML="⚡";
-    c.classList.add("fuse");
-    c.onclick=(e)=>{
-      if(e.target.classList.contains("node")) return;
-      c.classList.toggle("off");
-    };
     createNode(c,"net","left");
     createNode(c,"net","right");
   }
 
   workspace.appendChild(c);
+  makeDraggable(c);
 }
 
-// NODE (DRAW WIRE DRAG)
+// NODE (DRAW WIRE)
 function createNode(parent,type,pos){
   let n=document.createElement("div");
   n.className="node "+type+" "+pos;
@@ -168,7 +169,7 @@ function createNode(parent,type,pos){
   nodes.push(n);
 }
 
-// MOUSE MOVE (DRAW TEMP LINE)
+// MOUSE MOVE
 workspace.onmousemove=e=>{
   if(drawingWire){
     drawingWire.x=e.clientX;
@@ -201,6 +202,28 @@ function getNearestNode(x,y){
   });
   return res;
 }
+
+// HAPUS KABEL (KLIK)
+canvas.onclick=(e)=>{
+  let ws=workspace.getBoundingClientRect();
+  let x=e.clientX-ws.left;
+  let y=e.clientY-ws.top;
+
+  wires = wires.filter(w=>{
+    let r1=w.a.getBoundingClientRect();
+    let r2=w.b.getBoundingClientRect();
+
+    let x1=r1.left-ws.left+r1.width/2;
+    let y1=r1.top-ws.top+r1.height/2;
+    let x2=r2.left-ws.left+r2.width/2;
+    let y2=r2.top-ws.top+r2.height/2;
+
+    let dist=Math.abs((y2-y1)*x-(x2-x1)*y+x2*y1-y2*x1)/
+             Math.hypot(y2-y1,x2-x1);
+
+    return dist>5; // kalau dekat garis → hapus
+  });
+};
 
 // DRAW
 function draw(){
@@ -255,7 +278,7 @@ function draw(){
 }
 draw();
 
-// LOGIKA
+// LOGIKA REAL
 function buildGraph(){
   let g=new Map();
   nodes.forEach(n=>g.set(n,[]));
@@ -280,8 +303,7 @@ function hasPath(g,a,b,vis=new Set()){
 setInterval(()=>{
   let g=buildGraph();
 
-  let akiPlus,akiMin,lampNodes=[],lampComp;
-  let saklarOn=false, fuseOk=true;
+  let akiPlus,akiMin,lampNodes=[],lampComp,saklarOn=false;
 
   document.querySelectorAll(".component").forEach(c=>{
     if(c.innerText==="🔋"){
@@ -295,9 +317,6 @@ setInterval(()=>{
     if(c.classList.contains("switch") && c.classList.contains("on")){
       saklarOn=true;
     }
-    if(c.classList.contains("fuse") && c.classList.contains("off")){
-      fuseOk=false;
-    }
   });
 
   if(!akiPlus||!akiMin||lampNodes.length<2) return;
@@ -305,23 +324,13 @@ setInterval(()=>{
   let ok1=hasPath(g,akiPlus,lampNodes[0]);
   let ok2=hasPath(g,lampNodes[1],akiMin);
 
-  if(ok1 && ok2 && saklarOn && fuseOk){
+  if(ok1 && ok2 && saklarOn){
     lampComp.classList.add("lamp-on");
   }else{
     lampComp.classList.remove("lamp-on");
   }
 
 },300);
-
-// RESET
-function resetAll(){
-  nodes=[];
-  wires=[];
-  workspace.innerHTML='<canvas id="canvas"></canvas><div class="controls"><button onclick="resetAll()">Reset</button></div>';
-  canvas=document.getElementById("canvas");
-  ctx=canvas.getContext("2d");
-  resize();
-}
 </script>
 
 </body>
