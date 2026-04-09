@@ -2,62 +2,46 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Simulasi Lampu Rem</title>
+<title>Simulasi Wiring Lampu Rem</title>
 
 <style>
-body {
-  font-family: Arial;
-  margin: 0;
-}
-
-.container {
-  display: flex;
-  height: 100vh;
-}
+body { font-family: Arial; margin:0; }
+.container { display:flex; height:100vh; }
 
 .sidebar {
-  width: 220px;
-  background: #f2f2f2;
-  padding: 10px;
+  width:200px; background:#eee; padding:10px;
 }
-
 .item {
-  background: white;
-  padding: 10px;
-  margin: 5px 0;
-  border: 1px solid #ccc;
-  cursor: grab;
-  border-radius: 5px;
+  background:#fff; padding:10px; margin:5px;
+  border:1px solid #ccc; cursor:grab;
 }
 
 .workspace {
-  flex: 1;
-  border: 2px dashed #ccc;
-  position: relative;
+  flex:1; position:relative; background:#fafafa;
 }
 
-.dragged {
-  position: absolute;
-  padding: 10px;
-  border: 1px solid #333;
-  border-radius: 5px;
-  cursor: move;
+.component {
+  position:absolute;
+  padding:10px;
+  border:1px solid #333;
+  background:white;
 }
 
-/* Lampu */
-.lamp-off {
-  background: #ddd;
+.node {
+  width:12px; height:12px;
+  background:red;
+  border-radius:50%;
+  position:absolute;
+  cursor:pointer;
 }
 
-.lamp-on {
-  background: yellow;
-  box-shadow: 0 0 20px yellow;
-}
+.node.neg { background:black; }
 
-/* Saklar aktif */
-.active {
-  background: #4caf50 !important;
-  color: white;
+.lamp-on { background:yellow; box-shadow:0 0 20px yellow; }
+
+canvas {
+  position:absolute;
+  top:0; left:0;
 }
 </style>
 </head>
@@ -65,122 +49,129 @@ body {
 <body>
 
 <div class="container">
-
-  <!-- Sidebar -->
   <div class="sidebar">
-    <h3>Komponen</h3>
     <div class="item" draggable="true">AKI</div>
-    <div class="item" draggable="true">Fuse</div>
     <div class="item" draggable="true">Lampu</div>
-    <div class="item" draggable="true">Saklar Rem Depan</div>
-    <div class="item" draggable="true">Saklar Rem Belakang</div>
-    <div class="item" draggable="true">Massa</div>
+    <div class="item" draggable="true">Saklar</div>
   </div>
 
-  <!-- Workspace -->
-  <div class="workspace" id="workspace"></div>
-
+  <div class="workspace" id="workspace">
+    <canvas id="canvas"></canvas>
+  </div>
 </div>
 
 <script>
-let draggedItem = null;
-const workspace = document.getElementById('workspace');
+let dragged = "";
+let workspace = document.getElementById("workspace");
+let canvas = document.getElementById("canvas");
+let ctx = canvas.getContext("2d");
 
-let components = [];
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-// Drag start
-document.querySelectorAll('.item').forEach(item => {
-  item.addEventListener('dragstart', () => {
-    draggedItem = item.innerText;
-  });
+let nodes = [];
+let connections = [];
+let startNode = null;
+
+// DRAG
+document.querySelectorAll('.item').forEach(i=>{
+  i.ondragstart=()=> dragged=i.innerText;
 });
 
-// Allow drop
-workspace.addEventListener('dragover', (e) => {
-  e.preventDefault();
-});
+workspace.ondragover=e=>e.preventDefault();
 
-// Drop
-workspace.addEventListener('drop', (e) => {
-  e.preventDefault();
+workspace.ondrop=e=>{
+  let comp = document.createElement("div");
+  comp.className="component";
+  comp.style.left=e.offsetX+"px";
+  comp.style.top=e.offsetY+"px";
 
-  const el = document.createElement('div');
-  el.classList.add('dragged');
-  el.innerText = draggedItem;
-
-  el.style.left = e.offsetX + 'px';
-  el.style.top = e.offsetY + 'px';
-
-  // Tambah class khusus
-  if (draggedItem === "Lampu") {
-    el.classList.add("lamp-off");
+  if(dragged==="AKI"){
+    comp.innerHTML="AKI";
+    addNode(comp,0,20,"+");
+    addNode(comp,60,20,"-","neg");
   }
 
-  if (draggedItem.includes("Saklar")) {
-    el.addEventListener("click", () => {
-      el.classList.toggle("active");
-      checkLamp();
-    });
+  if(dragged==="Lampu"){
+    comp.innerHTML="Lampu";
+    addNode(comp,0,20,"");
+    addNode(comp,60,20,"");
   }
 
-  workspace.appendChild(el);
-  components.push(el);
+  if(dragged==="Saklar"){
+    comp.innerHTML="Saklar";
+    comp.onclick=()=> comp.classList.toggle("on");
+    addNode(comp,0,20,"");
+    addNode(comp,60,20,"");
+  }
 
-  makeDraggable(el);
-  checkLamp();
-});
+  workspace.appendChild(comp);
+};
 
-// Drag ulang dalam workspace
-function makeDraggable(el) {
-  let offsetX, offsetY, isDown = false;
+// TAMBAH TITIK KABEL
+function addNode(parent,x,y,label,type=""){
+  let n=document.createElement("div");
+  n.className="node "+type;
+  n.style.left=x+"px";
+  n.style.top=y+"px";
 
-  el.addEventListener('mousedown', (e) => {
-    isDown = true;
-    offsetX = e.offsetX;
-    offsetY = e.offsetY;
-  });
+  n.onclick=(e)=>{
+    e.stopPropagation();
 
-  document.addEventListener('mousemove', (e) => {
-    if (isDown) {
-      el.style.left = (e.pageX - workspace.offsetLeft - offsetX) + 'px';
-      el.style.top = (e.pageY - workspace.offsetTop - offsetY) + 'px';
+    if(!startNode){
+      startNode=n;
+    }else{
+      connections.push({a:startNode,b:n});
+      startNode=null;
+      draw();
+      checkCircuit();
     }
-  });
+  };
 
-  document.addEventListener('mouseup', () => {
-    isDown = false;
+  parent.appendChild(n);
+  nodes.push(n);
+}
+
+// GAMBAR KABEL
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  connections.forEach(c=>{
+    let r1=c.a.getBoundingClientRect();
+    let r2=c.b.getBoundingClientRect();
+
+    ctx.beginPath();
+    ctx.moveTo(r1.left+6, r1.top+6);
+    ctx.lineTo(r2.left+6, r2.top+6);
+    ctx.stroke();
   });
 }
 
-// LOGIKA LAMPU
-function checkLamp() {
-  let hasAki = false;
-  let hasLamp = false;
-  let hasMassa = false;
-  let switchOn = false;
+// CEK RANGKAIAN
+function checkCircuit(){
+  let akiPlus=null, akiMin=null, lamp=null, saklarOn=false;
 
-  components.forEach(el => {
-    if (el.innerText === "AKI") hasAki = true;
-    if (el.innerText === "Lampu") hasLamp = true;
-    if (el.innerText === "Massa") hasMassa = true;
-
-    if (el.innerText.includes("Saklar") && el.classList.contains("active")) {
-      switchOn = true;
+  document.querySelectorAll(".component").forEach(c=>{
+    if(c.innerText.includes("AKI")){
+      akiPlus=c.children[0];
+      akiMin=c.children[1];
+    }
+    if(c.innerText.includes("Lampu")){
+      lamp=c;
+    }
+    if(c.innerText.includes("Saklar") && c.classList.contains("on")){
+      saklarOn=true;
     }
   });
 
-  // Update lampu
-  components.forEach(el => {
-    if (el.innerText === "Lampu") {
-      if (hasAki && hasLamp && hasMassa && switchOn) {
-        el.classList.remove("lamp-off");
-        el.classList.add("lamp-on");
-      } else {
-        el.classList.remove("lamp-on");
-        el.classList.add("lamp-off");
-      }
-    }
-  });
+  if(!akiPlus || !akiMin || !lamp) return;
+
+  // cek sederhana: minimal ada 3 koneksi & saklar ON
+  if(connections.length>=3 && saklarOn){
+    lamp.classList.add("lamp-on");
+  }else{
+    lamp.classList.remove("lamp-on");
+  }
 }
 </script>
 
