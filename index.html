@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Simulasi Wiring PRO</title>
+<title>Simulasi Wiring PRO FIX</title>
 
 <style>
 body { margin:0; font-family:Arial; }
@@ -20,13 +20,19 @@ body { margin:0; font-family:Arial; }
   flex:1; position:relative; background:#fafafa;
 }
 
+/* COMPONENT */
 .component {
   position:absolute;
-  padding:10px;
-  border:1px solid #333;
+  width:80px;
+  height:50px;
+  text-align:center;
+  border:2px solid #333;
   background:white;
+  border-radius:6px;
+  user-select:none;
 }
 
+/* TERMINAL */
 .node {
   width:14px; height:14px;
   border-radius:50%;
@@ -38,11 +44,26 @@ body { margin:0; font-family:Arial; }
 .neg { background:black; }
 .net { background:blue; }
 
-.lamp-on { background:yellow; box-shadow:0 0 25px yellow; }
+/* POSISI TERMINAL */
+.left { left:-7px; top:50%; transform:translateY(-50%); }
+.right { right:-7px; top:50%; transform:translateY(-50%); }
+
+/* LAMPU */
+.lamp-on {
+  background:yellow;
+  box-shadow:0 0 20px yellow;
+}
+
+/* SAKLAR */
+.switch.on {
+  background:#4caf50;
+  color:white;
+}
 
 canvas {
   position:absolute;
   top:0; left:0;
+  pointer-events:none;
 }
 </style>
 </head>
@@ -67,8 +88,12 @@ let workspace=document.getElementById("workspace");
 let canvas=document.getElementById("canvas");
 let ctx=canvas.getContext("2d");
 
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+function resizeCanvas(){
+  canvas.width=workspace.clientWidth;
+  canvas.height=workspace.clientHeight;
+}
+resizeCanvas();
+window.onresize=resizeCanvas;
 
 let nodes=[];
 let wires=[];
@@ -88,33 +113,38 @@ workspace.ondrop=e=>{
   c.style.top=e.offsetY+"px";
 
   if(dragged==="AKI"){
-    c.innerHTML="AKI";
-    createNode(c,0,20,"pos");
-    createNode(c,70,20,"neg");
+    c.innerHTML="🔋 AKI";
+    createNode(c,"pos","left");
+    createNode(c,"neg","right");
   }
 
   if(dragged==="Lampu"){
-    c.innerHTML="Lampu";
-    createNode(c,0,20,"net");
-    createNode(c,70,20,"net");
+    c.innerHTML="💡 Lampu";
+    createNode(c,"net","left");
+    createNode(c,"net","right");
   }
 
   if(dragged==="Saklar"){
-    c.innerHTML="Saklar";
-    c.onclick=()=>{c.classList.toggle("on"); checkCircuit();}
-    createNode(c,0,20,"net");
-    createNode(c,70,20,"net");
+    c.innerHTML="⏻ Saklar";
+    c.classList.add("switch");
+
+    c.onclick=(e)=>{
+      if(e.target.classList.contains("node")) return;
+      c.classList.toggle("on");
+      checkCircuit();
+    };
+
+    createNode(c,"net","left");
+    createNode(c,"net","right");
   }
 
   workspace.appendChild(c);
 };
 
-// BUAT NODE
-function createNode(parent,x,y,type){
+// NODE
+function createNode(parent,type,pos){
   let n=document.createElement("div");
-  n.className="node "+type;
-  n.style.left=x+"px";
-  n.style.top=y+"px";
+  n.className="node "+type+" "+pos;
 
   n.onclick=(e)=>{
     e.stopPropagation();
@@ -133,13 +163,20 @@ function createNode(parent,x,y,type){
   nodes.push(n);
 }
 
-// GAMBAR KABEL
+// GAMBAR KABEL (FIX POSISI)
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   wires.forEach(w=>{
     let r1=w.a.getBoundingClientRect();
     let r2=w.b.getBoundingClientRect();
+    let ws=workspace.getBoundingClientRect();
+
+    let x1=r1.left - ws.left + r1.width/2;
+    let y1=r1.top - ws.top + r1.height/2;
+
+    let x2=r2.left - ws.left + r2.width/2;
+    let y2=r2.top - ws.top + r2.height/2;
 
     let color="blue";
     if(w.a.classList.contains("pos") || w.b.classList.contains("pos")) color="red";
@@ -149,34 +186,31 @@ function draw(){
     ctx.lineWidth=3;
 
     ctx.beginPath();
-    ctx.moveTo(r1.left+7, r1.top+7);
-    ctx.lineTo(r2.left+7, r2.top+7);
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
     ctx.stroke();
   });
 }
 
-// GRAPH (PATHFINDING)
+// GRAPH
 function buildGraph(){
-  let graph=new Map();
-
-  nodes.forEach(n=>graph.set(n,[]));
-
+  let g=new Map();
+  nodes.forEach(n=>g.set(n,[]));
   wires.forEach(w=>{
-    graph.get(w.a).push(w.b);
-    graph.get(w.b).push(w.a);
+    g.get(w.a).push(w.b);
+    g.get(w.b).push(w.a);
   });
-
-  return graph;
+  return g;
 }
 
 // DFS
-function hasPath(graph,start,target,visited=new Set()){
+function hasPath(g,start,target,visited=new Set()){
   if(start===target) return true;
   visited.add(start);
 
-  for(let next of graph.get(start)){
+  for(let next of g.get(start)){
     if(!visited.has(next)){
-      if(hasPath(graph,next,target,visited)) return true;
+      if(hasPath(g,next,target,visited)) return true;
     }
   }
   return false;
@@ -184,9 +218,9 @@ function hasPath(graph,start,target,visited=new Set()){
 
 // CEK RANGKAIAN REAL
 function checkCircuit(){
-  let graph=buildGraph();
+  let g=buildGraph();
 
-  let akiPlus, akiMin, lampNodes=[], saklarOn=false;
+  let akiPlus, akiMin, lampNodes=[], saklarOn=false, lampComp;
 
   document.querySelectorAll(".component").forEach(c=>{
     if(c.innerText.includes("AKI")){
@@ -194,25 +228,18 @@ function checkCircuit(){
       akiMin=c.children[1];
     }
     if(c.innerText.includes("Lampu")){
-      lampNodes=[c.children[0], c.children[1]];
+      lampNodes=[c.children[0],c.children[1]];
+      lampComp=c;
     }
-    if(c.innerText.includes("Saklar") && c.classList.contains("on")){
+    if(c.classList.contains("switch") && c.classList.contains("on")){
       saklarOn=true;
     }
   });
 
-  let lamp=document.querySelector(".component:nth-child(n)"); // ambil lampu
-  let lampComp=null;
-
-  document.querySelectorAll(".component").forEach(c=>{
-    if(c.innerText.includes("Lampu")) lampComp=c;
-  });
-
   if(!akiPlus || !akiMin || lampNodes.length<2) return;
 
-  // CEK JALUR:
-  let path1 = hasPath(graph, akiPlus, lampNodes[0]);
-  let path2 = hasPath(graph, lampNodes[1], akiMin);
+  let path1=hasPath(g,akiPlus,lampNodes[0]);
+  let path2=hasPath(g,lampNodes[1],akiMin);
 
   if(path1 && path2 && saklarOn){
     lampComp.classList.add("lamp-on");
